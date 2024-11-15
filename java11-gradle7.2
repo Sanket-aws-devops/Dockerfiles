@@ -1,0 +1,25 @@
+FROM ubuntu:20
+
+# Install dependencies: OpenJDK 11, curl, and bash
+RUN apt-get update -y 
+RUN apt-get install openjdk-11-jdk -y 
+RUN apt-get install unzip -y 
+
+# Install Gradle 7.2
+RUN curl -sSL https://services.gradle.org/distributions/gradle-7.2-bin.zip -o /tmp/gradle-7.2-bin.zip 
+ RUN unzip /tmp/gradle-7.2-bin.zip -d /opt/ 
+ RUN rm /tmp/gradle-7.2-bin.zip 
+ RUN ln -s /opt/gradle-7.2/bin/gradle /usr/local/bin/gradle
+
+# Set Java 11 environment variables
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+# Verify installation
+RUN java -version && gradle -v
+
+# Set default working directory
+WORKDIR /app
+
+# Default command
+CMD ["bash"]
