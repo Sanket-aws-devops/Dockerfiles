@@ -1,0 +1,53 @@
+# Stage 1: Build Java API
+FROM maven:3.8-jdk-11 AS java-builder
+WORKDIR /app
+COPY thymeleafExample/pom.xml .
+RUN mvn dependency:go-offline
+COPY thymeleafExample/src ./src
+RUN mvn clean install -DskipTests
+
+# Stage 2: Build React UI
+FROM node:18 AS react-builder
+WORKDIR /app
+COPY transport-ui/package*.json ./
+RUN npm install
+COPY transport-ui .
+RUN npm run build
+
+# Final Image: Runtime Environment for Java and React UI with Apache
+FROM eclipse-temurin:11-jre
+WORKDIR /app
+
+# Install Apache for UI serving (Minimizing package installations)
+RUN apt-get update && \
+    apt-get install -y apache2 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Disable default site (Important to avoid conflicts)
+RUN a2dissite 000-default.conf
+
+# Copy custom Apache configuration
+COPY scripts/000-default.conf /etc/apache2/sites-available/000-default.conf
+
+# Enable the custom site configuration
+RUN a2ensite 000-default.conf
+
+# Enable rewrite module (if it is not already enabled)
+RUN a2enmod rewrite
+
+# Copy artifacts from build stages
+COPY --from=java-builder /app/target/*.jar ./api.jar
+COPY --from=react-builder /app/build /var/www/html
+
+# Copy entrypoint script into the container
+COPY scripts/entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
+# Expose port 80 for Apache (UI)
+EXPOSE 80
+# Expose port 8080 for Java API
+EXPOSE 8080
+
+
+# Set entrypoint script to control service startup based on environment variable `SERVICE`
+ENTRYPOINT ["/app/entrypoint.sh"]
