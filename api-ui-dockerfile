@@ -51,3 +51,23 @@ EXPOSE 8080
 
 # Set entrypoint script to control service startup based on environment variable `SERVICE`
 ENTRYPOINT ["/app/entrypoint.sh"]
+
+
+
+
+#########################################################################################################################
+Entrypoint.sh
+=============
+
+#!/bin/sh
+
+if [ "$SERVICE" = "ui" ]; then
+  echo "Starting React UI with Apache"
+  exec apachectl -D FOREGROUND
+elif [ "$SERVICE" = "api" ]; then
+  echo "Starting Java API"
+  exec java -jar /app/api.jar
+else
+  echo "Set SERVICE environment to 'api' or 'ui'"
+  exit 1
+fi
